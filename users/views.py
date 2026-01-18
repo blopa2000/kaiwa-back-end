@@ -2,11 +2,13 @@
 from rest_framework import generics
 from .serializers import RegisterSerializer
 from .models import User
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
-from .serializers import UserListSerializer
+from .serializers import UserListSerializer, UserProfileSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -23,3 +25,18 @@ class UserViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return User.objects.exclude(id=self.request.user.id)
+
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class DeleteProfileView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
