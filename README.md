@@ -1,4 +1,4 @@
-# ChatApp Backend
+# Kaiwa Backend
 
 Backend for a chat application using Django Rest Framework and WebSockets (Django Channels).
 
