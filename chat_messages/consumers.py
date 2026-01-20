@@ -223,3 +223,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def set_user_offline(self, user):
         UserStatus.objects.update_or_create(user=user, defaults={"status": "offline"})
+
+    @database_sync_to_async
+    def set_user_typing(self, user):
+        UserStatus.objects.update_or_create(user=user, defaults={"status": "typing"})
