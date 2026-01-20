@@ -1,6 +1,6 @@
 # Create your views here.
-from rest_framework import generics
-from .serializers import RegisterSerializer
+from rest_framework import generics, permissions
+from .serializers import RegisterSerializer, UserPhotoSerializer
 from .models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -39,4 +39,13 @@ class DeleteProfileView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
+        return self.request.user
+
+
+class UploadUserPhotoView(generics.UpdateAPIView):
+    serializer_class = UserPhotoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # Retorna el usuario autenticado
         return self.request.user

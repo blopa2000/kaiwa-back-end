@@ -11,6 +11,7 @@ class Message(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)
+    edited_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.sender_id}: {self.content[:20]}"

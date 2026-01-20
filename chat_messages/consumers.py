@@ -5,6 +5,7 @@ from rooms.models import RoomParticipant, Room
 from .models import Message
 from users.models import UserStatus
 from channels.db import database_sync_to_async
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -29,12 +30,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.set_user_online(self.user)
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-
         await self.accept()
 
         # 📩 Enviar últimos 10 mensajes
         messages = await self.get_last_messages(self.room_id)
-
         for msg in reversed(messages):
             await self.send(
                 text_data=json.dumps(
@@ -45,6 +44,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "sender_id": msg.sender_id,
                         "created_at": msg.created_at.isoformat(),
                         "read_at": msg.read_at.isoformat() if msg.read_at else None,
+                        "edited_at": (
+                            msg.edited_at.isoformat()
+                            if hasattr(msg, "edited_at") and msg.edited_at
+                            else None
+                        ),
                     }
                 )
             )
@@ -86,6 +90,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.handle_message(data)
         elif event_type == "read":
             await self.handle_read(data)
+        elif event_type == "edit":
+            await self.handle_edit(data)
 
     # ================== EVENTS ==================
 
@@ -118,19 +124,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def handle_read(self, data):
-        message_id = data.get("message_id")
-        if not message_id:
+        """
+        data: { "message_ids": [1,2,3] }
+        """
+        message_ids = data.get("message_ids", [])
+        if not message_ids:
             return
 
-        updated = await self.mark_as_read(message_id)
+        updated = await self.mark_as_read(message_ids)
 
         if updated:
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    "type": "message_read",
-                    "message_id": message_id,
+                    "type": "messages_read",
+                    "message_ids": message_ids,
                     "user_id": self.user.id,
+                },
+            )
+
+    async def handle_edit(self, data):
+        """
+        data: { "message_id": 1, "content": "nuevo contenido" }
+        """
+        message_id = data.get("message_id")
+        new_content = data.get("content")
+        if not message_id or new_content is None:
+            return
+
+        message = await self.edit_message(message_id, new_content)
+        if message:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "message_edited",
+                    "id": message.id,
+                    "content": message.content,
+                    "edited_at": (
+                        message.edited_at.isoformat() if message.edited_at else None
+                    ),
                 },
             )
 
@@ -180,13 +212,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
-    async def message_read(self, event):
+    async def messages_read(self, event):
         await self.send(
             text_data=json.dumps(
                 {
                     "type": "read",
-                    "message_id": event["message_id"],
+                    "message_ids": event["message_ids"],
                     "user_id": event["user_id"],
+                }
+            )
+        )
+
+    async def message_edited(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "edit",
+                    "id": event["id"],
+                    "content": event["content"],
+                    "edited_at": event["edited_at"],
                 }
             )
         )
@@ -211,10 +255,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     @database_sync_to_async
-    def mark_as_read(self, message_id):
-        return Message.objects.filter(id=message_id, read_at__isnull=True).update(
+    def mark_as_read(self, message_ids):
+        return Message.objects.filter(id__in=message_ids, read_at__isnull=True).update(
             read_at=timezone.now()
         )
+
+    @database_sync_to_async
+    def edit_message(self, message_id, new_content):
+        message = Message.objects.get(id=message_id)
+        if message.sender_id != self.user.id:
+            return None  # No puede editar si no es autor
+        message.content = new_content
+        message.edited_at = timezone.now()
+        message.save()
+        return message
 
     @database_sync_to_async
     def set_user_online(self, user):

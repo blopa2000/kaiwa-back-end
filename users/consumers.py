@@ -43,5 +43,7 @@ class PresenceConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event))
 
     @database_sync_to_async
-    async def _update_status(self, status):
+    def _update_status(self, status):
+        if not self.user or not self.user.is_authenticated:
+            return
         UserStatus.objects.update_or_create(user=self.user, defaults={"status": status})

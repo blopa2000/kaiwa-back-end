@@ -1,6 +1,12 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import DeleteProfileView, RegisterView, UserViewSet, ProfileView
+from .views import (
+    DeleteProfileView,
+    RegisterView,
+    UploadUserPhotoView,
+    UserViewSet,
+    ProfileView,
+)
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -12,6 +18,7 @@ urlpatterns = [
     path("refresh/", TokenRefreshView.as_view()),
     path("me/", ProfileView.as_view()),
     path("me/delete/", DeleteProfileView.as_view()),
+    path("upload-photo/", UploadUserPhotoView.as_view(), name="upload-user-photo"),
 ]
 
 urlpatterns += router.urls

@@ -38,3 +38,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "photo",
         )
         read_only_fields = ("email",)
+
+
+class UserPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["photo"]

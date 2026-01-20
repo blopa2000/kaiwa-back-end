@@ -1,6 +1,9 @@
+from rest_framework.response import Response
+from rest_framework import status
 from rest_framework import generics, permissions
 from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rooms.models import Room, RoomParticipant
 from .models import Message
 from .serializers import MessageSerializer
@@ -47,3 +50,30 @@ class MessageListView(generics.ListAPIView):
             room__participants__user=self.request.user,
             room__participants__is_active=True,
         ).order_by("-created_at")
+
+
+class MessageEditView(generics.UpdateAPIView):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, *args, **kwargs):
+        message = self.get_object()
+
+        # Solo el autor puede editar
+        if message.sender != request.user:
+            return Response(
+                {"detail": "No tienes permiso"}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        new_content = request.data.get("content")
+        if not new_content:
+            return Response(
+                {"detail": "Content es requerido"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        message.content = new_content
+        message.edited_at = timezone.now()
+        message.save()
+
+        return Response(self.get_serializer(message).data)
