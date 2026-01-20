@@ -30,13 +30,16 @@ Backend for a chat application using Django Rest Framework and WebSockets (Djang
 
 ```bash
 git clone <repo-url>
-cd back-chat
+cd kaiwa-back-end
+
 ```
 
 ## Create and activate a virtual environment
-
-python -m venv venv source venv/bin/activate # Linux / Mac venv\Scripts\activate # Windows
-
+```
+python -m venv venv 
+source venv/bin/activate 
+# Linux / Mac venv\Scripts\activate
+```
 ## Install dependencies
 
 ```
