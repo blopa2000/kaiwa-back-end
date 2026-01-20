@@ -46,10 +46,49 @@ pip install -r requirements.txt
 ## Create a `.env` file in the root directory:
 
 ```
-CLOUDINARY_CLOUD_NAME=<your_cloud_name>
-CLOUDINARY_API_KEY=<your_api_key>
-CLOUDINARY_API_SECRET=<your_api_secret>
-CLOUDINARY_MEDIA_FOLDER=users
+# ==============================
+# Django
+# ==============================
+SECRET_KEY=django-insecure-change-this
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+
+# ==============================
+# Database (SQLite by default)
+# ==============================
+DB_ENGINE=django.db.backends.sqlite3
+DB_NAME=db.sqlite3
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_PORT=
+
+# ==============================
+# JWT
+# ==============================
+JWT_ACCESS_MINUTES=60
+JWT_REFRESH_DAYS=1
+
+# ==============================
+# Cloudinary
+# ==============================
+CLOUDINARY_CLOUD_NAME=cloud_name
+CLOUDINARY_API_KEY=your_api_key_here
+CLOUDINARY_API_SECRET=your_api_secret_here
+CLOUDINARY_MEDIA_FOLDER=media_folder
+
+# ==============================
+# Channels / Redis
+# ==============================
+CHANNEL_LAYER_BACKEND=channels.layers.InMemoryChannelLayer
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# ==============================
+# Localization
+# ==============================
+LANGUAGE_CODE=en-us
+TIME_ZONE=UTC
 
 ```
 

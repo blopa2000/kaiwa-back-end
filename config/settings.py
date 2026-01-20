@@ -12,28 +12,35 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-from decouple import config  # Asegúrate de instalar python-decouple
+from decouple import config
 
 # Cloudinary
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
+# ==============================
+# Core settings
+# ==============================
 SECRET_KEY = config(
     "SECRET_KEY",
     default="django-insecure-*%uw(!#2*vqhh37sy*^o)(32nwketv+9di=ao1%@05-em9ojtf",
 )
+
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS", default="", cast=lambda v: [s.strip() for s in v.split(",") if s]
+    "ALLOWED_HOSTS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s],
 )
 
-# Application definition
+# ==============================
+# Applications
+# ==============================
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -42,21 +49,23 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "daphne",
     "django.contrib.staticfiles",
-    # third party
+    # Third party
     "rest_framework",
     "rest_framework.authtoken",
     "drf_spectacular",
     "channels",
     "cloudinary",
     "cloudinary_storage",
-    # local apps
+    # Local apps
     "users.apps.UsersConfig",
     "rooms",
     "chat_messages",
-    "contacts",
     "common",
 ]
 
+# ==============================
+# Middleware
+# ==============================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -69,6 +78,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+# ==============================
+# Templates
+# ==============================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -84,18 +96,35 @@ TEMPLATES = [
     },
 ]
 
+# ==============================
+# ASGI / WSGI
+# ==============================
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+# ==============================
 # Database
+# ==============================
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": config(
+            "DB_ENGINE",
+            default="django.db.backends.sqlite3",
+        ),
+        "NAME": config(
+            "DB_NAME",
+            default=BASE_DIR / "db.sqlite3",
+        ),
+        "USER": config("DB_USER", default=""),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default=""),
+        "PORT": config("DB_PORT", default=""),
     }
 }
 
+# ==============================
 # Password validation
+# ==============================
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
@@ -105,19 +134,25 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# ==============================
 # Internationalization
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# ==============================
+LANGUAGE_CODE = config("LANGUAGE_CODE", default="en-us")
+TIME_ZONE = config("TIME_ZONE", default="UTC")
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# ==============================
+# Static & Media
+# ==============================
 STATIC_URL = "static/"
 
-# Media files y Cloudinary
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ==============================
+# Cloudinary
+# ==============================
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": config("CLOUDINARY_CLOUD_NAME"),
     "API_KEY": config("CLOUDINARY_API_KEY"),
@@ -125,9 +160,18 @@ CLOUDINARY_STORAGE = {
 }
 
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
 CLOUDINARY_MEDIA_FOLDER = config("CLOUDINARY_MEDIA_FOLDER", default="kaiwa")
 
-# REST Framework
+cloudinary.config(
+    cloud_name=config("CLOUDINARY_CLOUD_NAME"),
+    api_key=config("CLOUDINARY_API_KEY"),
+    api_secret=config("CLOUDINARY_API_SECRET"),
+)
+
+# ==============================
+# Django REST Framework
+# ==============================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -136,6 +180,9 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+# ==============================
+# Swagger / Spectacular
+# ==============================
 SPECTACULAR_SETTINGS = {
     "TITLE": "Chat API",
     "DESCRIPTION": "Backend de aplicación de chat (DRF + WebSockets)",
@@ -144,31 +191,57 @@ SPECTACULAR_SETTINGS = {
     "SECURITY": [{"bearerAuth": []}],
     "COMPONENTS": {
         "securitySchemes": {
-            "bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
         }
     },
 }
 
+# ==============================
 # Channels
+# ==============================
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "BACKEND": config(
+            "CHANNEL_LAYER_BACKEND",
+            default="channels.layers.InMemoryChannelLayer",
+        ),
+        "CONFIG": (
+            {
+                "hosts": [
+                    (
+                        config("REDIS_HOST", default="localhost"),
+                        config("REDIS_PORT", default=6379, cast=int),
+                    )
+                ]
+            }
+            if "redis"
+            in config(
+                "CHANNEL_LAYER_BACKEND",
+                default="channels.layers.InMemoryChannelLayer",
+            )
+            else {}
+        ),
     }
 }
 
-# User model
+# ==============================
+# Custom User
+# ==============================
 AUTH_USER_MODEL = "users.User"
 
-# JWT settings
+# ==============================
+# JWT
+# ==============================
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=config("JWT_ACCESS_MINUTES", default=60, cast=int)
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=config("JWT_REFRESH_DAYS", default=1, cast=int)
+    ),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
-
-# Opcional: carga inicial de Cloudinary para verificar conexión
-cloudinary.config(
-    cloud_name=config("CLOUDINARY_CLOUD_NAME"),
-    api_key=config("CLOUDINARY_API_KEY"),
-    api_secret=config("CLOUDINARY_API_SECRET"),
-)
