@@ -42,6 +42,8 @@ class MessageListView(generics.ListAPIView):
 
     def get_queryset(self):
         room_id = self.kwargs["room_id"]
-        room = Room.objects.get(id=room_id)
-        # Solo mensajes de esa room, ordenados del más reciente al más antiguo
-        return room.messages.order_by("-created_at")
+        return Message.objects.filter(
+            room_id=room_id,
+            room__participants__user=self.request.user,
+            room__participants__is_active=True,
+        ).order_by("-created_at")

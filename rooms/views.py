@@ -9,8 +9,9 @@ class RoomListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Room.objects.filter(
-            roomparticipant__user=self.request.user, roomparticipant__is_active=True
-        ).distinct()  # evita duplicados
+            participants__user=self.request.user,
+            participants__is_active=True,
+        ).distinct()
 
 
 class RoomDeleteView(generics.DestroyAPIView):
