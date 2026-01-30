@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "daphne",
     "django.contrib.staticfiles",
     # Third party
+    "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_spectacular",
@@ -67,9 +68,10 @@ INSTALLED_APPS = [
 # Middleware
 # ==============================
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -245,3 +247,10 @@ SIMPLE_JWT = {
     ),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# ==============================
+# CORS
+# ==============================
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",
+]
