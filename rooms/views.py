@@ -31,3 +31,17 @@ class RoomDeleteView(generics.DestroyAPIView):
                 {"detail": "Room no encontrada o ya eliminada."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+class LastRoomView(generics.RetrieveAPIView):
+    serializer_class = RoomSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return (
+            Room.objects.filter(
+                participants__user=self.request.user, participants__is_active=True
+            )
+            .order_by("-created_at")  # la más reciente
+            .first()
+        )

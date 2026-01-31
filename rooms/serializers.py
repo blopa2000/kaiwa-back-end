@@ -13,9 +13,29 @@ class RoomSerializer(serializers.ModelSerializer):
         fields = ["id", "other_user", "last_message", "created_at"]
 
     def get_other_user(self, obj):
-        request_user = self.context["request"].user
-        other = obj.users.exclude(id=request_user.id).first()
-        return UserListSerializer(other).data if other else None
+        # Intentar obtener user de REST
+        user = None
+        request = self.context.get("request")
+        if request:
+            user = getattr(request, "user", None)
+
+        # Si no hay user, intentar obtener de context (WS)
+        if not user:
+            user = self.context.get("user")
+
+        # Si todavía no hay user, devolvemos None
+        if not user or not user.is_authenticated:
+            return None
+
+        # Obtener el otro usuario de la room
+        other_participant = (
+            obj.participants.exclude(user=user).select_related("user").first()
+        )
+        return (
+            UserListSerializer(other_participant.user).data
+            if other_participant
+            else None
+        )
 
     def get_last_message(self, obj):
         last_msg = obj.messages.order_by("-created_at").first()
