@@ -102,16 +102,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         message = await self.create_message(self.user, self.room_id, content)
 
+        message_data = {
+            "id": message.id,
+            "content": message.content,
+            "sender_id": self.user.id,
+            "created_at": message.created_at.isoformat(),
+        }
+
+        # Enviar a la conversación activa
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "chat_message",
-                "id": message.id,
-                "content": message.content,
-                "sender_id": self.user.id,
-                "created_at": message.created_at.isoformat(),
+                **message_data,
             },
         )
+
+        # Notificar a la chat-list (rooms)
+        participants = await self.get_room_participants(self.room_id)
+
+        for user_id in participants:
+            await self.channel_layer.group_send(
+                f"rooms_user_{user_id}",
+                {
+                    "type": "new_message",
+                    "room_id": int(self.room_id),
+                    "message": message_data,
+                },
+            )
 
     async def handle_typing(self, data):
         await self.channel_layer.group_send(
@@ -281,3 +299,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def set_user_typing(self, user):
         UserStatus.objects.update_or_create(user=user, defaults={"status": "typing"})
+
+    @database_sync_to_async
+    def get_room_participants(self, room_id):
+        return list(
+            RoomParticipant.objects.filter(room_id=room_id, is_active=True).values_list(
+                "user_id", flat=True
+            )
+        )

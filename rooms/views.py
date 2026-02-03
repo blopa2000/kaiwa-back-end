@@ -1,6 +1,8 @@
 from rest_framework import generics, permissions, status
 from .models import Room, RoomParticipant
 from .serializers import RoomSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 
 class RoomListView(generics.ListAPIView):
@@ -45,3 +47,33 @@ class LastRoomView(generics.RetrieveAPIView):
             .order_by("-created_at")  # la más reciente
             .first()
         )
+
+
+class FindRoomView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        other_user_id = request.query_params.get("user_id")
+
+        if not other_user_id:
+            return Response({"exists": False})
+
+        rooms = (
+            Room.objects.filter(
+                participants__user=user,
+                participants__is_active=True,
+            )
+            .filter(
+                participants__user_id=other_user_id,
+                participants__is_active=True,
+            )
+            .distinct()
+        )
+
+        room = rooms.first()
+
+        if room:
+            return Response({"exists": True, "room_id": room.id})
+
+        return Response({"exists": False})

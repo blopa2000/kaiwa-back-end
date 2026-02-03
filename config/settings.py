@@ -209,7 +209,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": config(
             "CHANNEL_LAYER_BACKEND",
-            default="channels.layers.InMemoryChannelLayer",
+            "channels_redis.core.RedisChannelLayer",
         ),
         "CONFIG": (
             {
@@ -220,12 +220,6 @@ CHANNEL_LAYERS = {
                     )
                 ]
             }
-            if "redis"
-            in config(
-                "CHANNEL_LAYER_BACKEND",
-                default="channels.layers.InMemoryChannelLayer",
-            )
-            else {}
         ),
     }
 }
