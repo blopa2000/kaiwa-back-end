@@ -4,7 +4,13 @@ from rest_framework import generics, permissions
 from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 from rooms.models import Room, RoomParticipant
+from rooms.serializers import RoomSerializer
+
 from .models import Message
 from .serializers import MessageSerializer
 
@@ -12,8 +18,8 @@ User = get_user_model()
 
 
 class MessageListPagination(LimitOffsetPagination):
-    default_limit = 10  # por defecto trae 10 mensajes
-    max_limit = 50  # máximo que se puede pedir
+    default_limit = 30
+    max_limit = 50
 
 
 class MessageCreateView(generics.CreateAPIView):
@@ -24,18 +30,76 @@ class MessageCreateView(generics.CreateAPIView):
         recipient_id = self.request.data.get("recipient_id")
         content = self.request.data.get("content")
 
-        recipient = User.objects.get(id=recipient_id)
         sender = self.request.user
+        recipient = User.objects.get(id=recipient_id)
 
-        # Verificar si ya existe room 1 a 1
-        room = Room.objects.filter(users=sender).filter(users=recipient).first()
+        channel_layer = get_channel_layer()
+
+        # 🔍 Buscar room 1 a 1 existente (usando RoomParticipant)
+        room = (
+            Room.objects.filter(
+                participants__user=sender,
+                participants__is_active=True,
+            )
+            .filter(
+                participants__user=recipient,
+                participants__is_active=True,
+            )
+            .distinct()
+            .first()
+        )
+
+        room_was_created = False
+
+        # 🆕 Crear room si no existe
         if not room:
             room = Room.objects.create()
-            RoomParticipant.objects.create(user=sender, room=room)
-            RoomParticipant.objects.create(user=recipient, room=room)
 
-        # Crear mensaje en esa room
-        serializer.save(sender=sender, room=room, content=content)
+            RoomParticipant.objects.bulk_create(
+                [
+                    RoomParticipant(room=room, user=sender),
+                    RoomParticipant(room=room, user=recipient),
+                ]
+            )
+
+            room_was_created = True
+
+        # 💬 Crear mensaje
+        message = serializer.save(sender=sender, room=room, content=content)
+
+        # 🔔 Notificar creación de room (solo la primera vez)
+        if room_was_created:
+            for user in (sender, recipient):
+                room_serializer = RoomSerializer(room, context={"user": user})
+
+                async_to_sync(channel_layer.group_send)(
+                    f"rooms_user_{user.id}",
+                    {
+                        "type": "room_created",
+                        "room": room_serializer.data,
+                    },
+                )
+
+        # 📩 Notificar mensaje nuevo a ambos usuarios (sidebar + conversación)
+        message_data = MessageSerializer(message).data
+
+        async_to_sync(channel_layer.group_send)(
+            f"rooms_user_{recipient.id}",
+            {
+                "type": "new_message",
+                "room_id": room.id,
+                "message": message_data,
+            },
+        )
+
+        async_to_sync(channel_layer.group_send)(
+            f"rooms_user_{sender.id}",
+            {
+                "type": "new_message",
+                "room_id": room.id,
+                "message": message_data,
+            },
+        )
 
 
 class MessageListView(generics.ListAPIView):
@@ -63,13 +127,15 @@ class MessageEditView(generics.UpdateAPIView):
         # Solo el autor puede editar
         if message.sender != request.user:
             return Response(
-                {"detail": "No tienes permiso"}, status=status.HTTP_403_FORBIDDEN
+                {"detail": "No tienes permiso"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         new_content = request.data.get("content")
         if not new_content:
             return Response(
-                {"detail": "Content es requerido"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Content es requerido"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         message.content = new_content

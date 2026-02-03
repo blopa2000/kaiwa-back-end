@@ -53,6 +53,17 @@ class RoomsConsumer(AsyncWebsocketConsumer):
             )
         )
 
+    # 🆕 room creada (ESTO ES LO QUE FALTABA)
+    async def room_created(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "room_created",
+                    "room": event["room"],
+                }
+            )
+        )
+
     @database_sync_to_async
     def get_user_rooms(self):
         queryset = (
