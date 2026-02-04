@@ -6,6 +6,7 @@ from .models import Message
 from users.models import UserStatus
 from channels.db import database_sync_to_async
 from django.utils import timezone
+from rooms.serializers import RoomSerializer
 
 User = get_user_model()
 
@@ -107,6 +108,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "content": message.content,
             "sender_id": self.user.id,
             "created_at": message.created_at.isoformat(),
+            "read_at": None,
         }
 
         # Enviar a la conversación activa
@@ -158,6 +160,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "type": "messages_read",
                     "message_ids": message_ids,
                     "user_id": self.user.id,
+                    "room_id": int(self.room_id),
+                },
+            )
+
+        # Notificar chat-list (ESTO FALTABA)
+        room_data = await self.serialize_room()
+
+        participants = await self.get_room_participants(self.room_id)
+        for user_id in participants:
+            await self.channel_layer.group_send(
+                f"rooms_user_{user_id}",
+                {
+                    "type": "room_update",
+                    "room": room_data,
                 },
             )
 
@@ -254,6 +270,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     # ================== DB ==================
+
+    @database_sync_to_async
+    def serialize_room(self):
+        room = Room.objects.get(id=self.room_id)
+        return RoomSerializer(room, context={"user": self.user}).data
 
     @database_sync_to_async
     def user_in_room(self, user, room_id):
