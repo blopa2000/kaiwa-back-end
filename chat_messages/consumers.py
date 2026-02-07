@@ -166,7 +166,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Notificar chat-list (ESTO FALTABA)
         room_data = await self.serialize_room()
-
         participants = await self.get_room_participants(self.room_id)
         for user_id in participants:
             await self.channel_layer.group_send(

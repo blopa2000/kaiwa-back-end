@@ -21,12 +21,21 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
+    photo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ("id", "username", "email", "photo")
 
+    def get_photo(self, obj):
+        if obj.photo:
+            return obj.photo.url
+        return None
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    photo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -38,6 +47,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "photo",
         )
         read_only_fields = ("email",)
+
+    def get_photo(self, obj):
+        if obj.photo:
+            return obj.photo.url
+        return None
 
 
 class UserPhotoSerializer(serializers.ModelSerializer):

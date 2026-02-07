@@ -9,6 +9,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
 from .serializers import UserListSerializer, UserProfileSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class RegisterView(generics.CreateAPIView):
@@ -45,7 +46,7 @@ class DeleteProfileView(generics.DestroyAPIView):
 class UploadUserPhotoView(generics.UpdateAPIView):
     serializer_class = UserPhotoSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
-        # Retorna el usuario autenticado
         return self.request.user
