@@ -109,11 +109,18 @@ class MessageListView(generics.ListAPIView):
 
     def get_queryset(self):
         room_id = self.kwargs["room_id"]
-        return Message.objects.filter(
+        queryset = Message.objects.filter(
             room_id=room_id,
             room__participants__user=self.request.user,
             room__participants__is_active=True,
-        ).order_by("-created_at")
+        )
+
+        before_id = self.request.query_params.get("before_id")
+
+        if before_id:
+            queryset = queryset.filter(id__lt=before_id)
+
+        return queryset.order_by("-created_at")
 
 
 class MessageEditView(generics.UpdateAPIView):

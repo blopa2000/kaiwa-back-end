@@ -34,7 +34,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # 📩 Enviar últimos 10 mensajes
-        messages = await self.get_last_messages(self.room_id)
+        messages = await self.get_last_messages(self.room_id, 30)
         for msg in reversed(messages):
             await self.send(
                 text_data=json.dumps(
@@ -287,7 +287,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return Message.objects.create(sender=user, room=room, content=content)
 
     @database_sync_to_async
-    def get_last_messages(self, room_id, limit=10):
+    def get_last_messages(self, room_id, limit=30):
         return list(
             Message.objects.filter(room_id=room_id).order_by("-created_at")[:limit]
         )
